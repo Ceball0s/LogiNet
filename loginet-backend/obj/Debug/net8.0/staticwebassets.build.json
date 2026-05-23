@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "zmFbK3M7N0dTD1epONzUvTgsntSGYqOAN9LvN/Wi0L0=",
+  "Source": "loginet-backend",
+  "BasePath": "_content/loginet-backend",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
