@@ -27,26 +27,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final nav = Navigator.of(context);
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final success = await auth.register(
+    final result = await auth.register(
       _nameCtrl.text.trim(),
       _emailCtrl.text.trim(),
       _passCtrl.text,
       _role,
     );
     if (!mounted) return;
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
+    if (result['success'] == true) {
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('Registro exitoso. Inicia sesión.'),
           backgroundColor: Colors.green,
         ),
       );
-      Navigator.pop(context);
+      nav.pop();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error al registrar. Intenta de nuevo.'),
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(result['error'] ?? 'Error al registrar'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -68,17 +70,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Nombre
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color:
+                          colorScheme.primaryContainer.withValues(alpha: 0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.person_add_rounded,
+                        size: 48, color: colorScheme.primary),
+                  ),
+                  const SizedBox(height: 24),
+
                   TextFormField(
                     controller: _nameCtrl,
                     textInputAction: TextInputAction.next,
                     autocorrect: false,
+                    textCapitalization: TextCapitalization.words,
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: InputDecoration(
                       labelText: 'Nombre completo',
@@ -92,7 +107,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Email
                   TextFormField(
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
@@ -107,7 +121,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       labelStyle:
                           TextStyle(color: colorScheme.onSurfaceVariant),
                       hintStyle: TextStyle(
-                          color: colorScheme.onSurface.withOpacity(0.4)),
+                          color:
+                              colorScheme.onSurface.withValues(alpha: 0.4)),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
@@ -119,7 +134,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Contraseña
                   TextFormField(
                     controller: _passCtrl,
                     obscureText: _obscurePass,
@@ -140,16 +154,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           TextStyle(color: colorScheme.onSurfaceVariant),
                     ),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Ingresa una contraseña';
+                      if (v == null || v.isEmpty) {
+                        return 'Ingresa una contraseña';
+                      }
                       if (v.length < 6) return 'Mínimo 6 caracteres';
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
 
-                  // Rol
                   DropdownButtonFormField<String>(
-                    value: _role,
+                    initialValue: _role,
                     decoration: InputDecoration(
                       labelText: 'Rol',
                       prefixIcon: const Icon(Icons.badge_outlined),
@@ -157,25 +172,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       labelStyle:
                           TextStyle(color: colorScheme.onSurfaceVariant),
                     ),
-                    style: TextStyle(
-                        color: colorScheme.onSurface, fontSize: 16),
+                    style:
+                        TextStyle(color: colorScheme.onSurface, fontSize: 16),
                     dropdownColor: colorScheme.surface,
                     items: const [
                       DropdownMenuItem(
                           value: 'Repartidor', child: Text('Repartidor')),
-                      DropdownMenuItem(value: 'Admin', child: Text('Admin')),
+                      DropdownMenuItem(
+                          value: 'Admin', child: Text('Admin')),
                     ],
                     onChanged: (v) => setState(() => _role = v!),
                   ),
                   const SizedBox(height: 28),
 
-                  // Botón
                   SizedBox(
                     height: 50,
                     child: isLoading
                         ? const Center(child: CircularProgressIndicator())
                         : FilledButton(
                             onPressed: _register,
+                            style: FilledButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
                             child: const Text(
                               'Registrarse',
                               style: TextStyle(fontSize: 16),
@@ -185,7 +205,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('¿Ya tienes cuenta? Inicia sesión'),
+                    child:
+                        const Text('¿Ya tienes cuenta? Inicia sesión'),
                   ),
                 ],
               ),

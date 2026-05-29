@@ -6,10 +6,11 @@ import '../services/api_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final ApiService apiService;
-  
+
   String? _token;
   String? _role;
   bool _isLoading = false;
+  String? _lastError;
 
   AuthProvider(this.apiService) {
     _loadToken();
@@ -19,6 +20,12 @@ class AuthProvider with ChangeNotifier {
   String? get role => _role;
   bool get isAuthenticated => _token != null && !JwtDecoder.isExpired(_token!);
   bool get isLoading => _isLoading;
+  String? get lastError => _lastError;
+
+  void clearError() {
+    _lastError = null;
+    notifyListeners();
+  }
 
   Future<void> _loadToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -40,6 +47,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> login(String email, String password) async {
     _isLoading = true;
+    _lastError = null;
     notifyListeners();
 
     try {
@@ -51,19 +59,22 @@ class AuthProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         _token = data['token'];
-        
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('jwt_token', _token!);
-        
+
         apiService.setToken(_token);
         _decodeRole(_token!);
-        
+
         _isLoading = false;
         notifyListeners();
         return true;
       }
+
+      _lastError = 'Credenciales inválidas';
     } catch (e) {
-      print("Login error: $e");
+      debugPrint("Login error: $e");
+      _lastError = 'Error de conexión con el servidor';
     }
 
     _isLoading = false;
@@ -71,8 +82,10 @@ class AuthProvider with ChangeNotifier {
     return false;
   }
 
-  Future<bool> register(String name, String email, String password, String role) async {
+  Future<Map<String, dynamic>> register(
+      String name, String email, String password, String role) async {
     _isLoading = true;
+    _lastError = null;
     notifyListeners();
 
     try {
@@ -86,15 +99,25 @@ class AuthProvider with ChangeNotifier {
       if (response.statusCode == 200 || response.statusCode == 201) {
         _isLoading = false;
         notifyListeners();
-        return true;
+        return {'success': true};
       }
-    } catch (e) {
-      print("Register error: $e");
-    }
 
-    _isLoading = false;
-    notifyListeners();
-    return false;
+      String msg = 'Error del servidor';
+      try {
+        final body = json.decode(response.body);
+        msg = body['message'] ?? 'Error $response.statusCode';
+      } catch (_) {}
+
+      _lastError = msg;
+      return {'success': false, 'error': msg};
+    } catch (e) {
+      debugPrint("Register error: $e");
+      _lastError = 'Error de conexión con el servidor';
+      return {'success': false, 'error': _lastError};
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> logout() async {

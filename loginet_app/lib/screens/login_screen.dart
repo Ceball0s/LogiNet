@@ -25,12 +25,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
+    final messenger = ScaffoldMessenger.of(context);
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.login(_emailCtrl.text.trim(), _passCtrl.text);
     if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Correo o contraseña incorrectos'),
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(auth.lastError ?? 'Correo o contraseña incorrectos'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -47,24 +48,31 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo / ícono
-                  Icon(Icons.local_shipping_rounded,
-                      size: 80, color: colorScheme.primary),
-                  const SizedBox(height: 12),
+                  Container(
+                    padding: EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.local_shipping_rounded,
+                        size: 64, color: colorScheme.primary),
+                  ),
+                  const SizedBox(height: 16),
                   Text(
                     'LogiNet',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 34,
+                      fontSize: 36,
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
+                      letterSpacing: 1.5,
                     ),
                   ),
                   Text(
@@ -72,12 +80,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
-                      color: colorScheme.onSurface.withOpacity(0.6),
+                      color: colorScheme.onSurface.withValues(alpha: 0.6),
+                      letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(height: 40),
 
-                  // Email
                   TextFormField(
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
@@ -89,9 +97,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: 'ejemplo@correo.com',
                       prefixIcon: const Icon(Icons.email_outlined),
                       border: const OutlineInputBorder(),
-                      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                      labelStyle:
+                          TextStyle(color: colorScheme.onSurfaceVariant),
                       hintStyle: TextStyle(
-                          color: colorScheme.onSurface.withOpacity(0.4)),
+                          color: colorScheme.onSurface.withValues(alpha: 0.4)),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
@@ -103,7 +112,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Contraseña
                   TextFormField(
                     controller: _passCtrl,
                     obscureText: _obscurePass,
@@ -121,7 +129,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             setState(() => _obscurePass = !_obscurePass),
                       ),
                       border: const OutlineInputBorder(),
-                      labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                      labelStyle:
+                          TextStyle(color: colorScheme.onSurfaceVariant),
                     ),
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Ingresa tu contraseña';
@@ -130,22 +139,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 28),
 
-                  // Botón
                   SizedBox(
                     height: 50,
                     child: isLoading
                         ? const Center(child: CircularProgressIndicator())
                         : FilledButton(
                             onPressed: _login,
+                            style: FilledButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
                             child: const Text(
                               'Iniciar Sesión',
                               style: TextStyle(fontSize: 16),
                             ),
                           ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
 
-                  // Registro
                   TextButton(
                     onPressed: () => Navigator.push(
                       context,

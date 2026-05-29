@@ -24,9 +24,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<TokenService>();
 
+// CORS for Flutter web
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+});
+
 // JWT authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"];
+var secretKey = jwtSettings["SecretKey"] ?? "super_secret_key_that_is_long_enough_to_be_secure_for_jwt";
 var key = Encoding.ASCII.GetBytes(secretKey);
 
 builder.Services.AddAuthentication(options =>
@@ -38,6 +45,7 @@ builder.Services.AddAuthentication(options =>
 {
     options.RequireHttpsMetadata = false;
     options.SaveToken = true;
+    options.MapInboundClaims = false;
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = false,
@@ -55,11 +63,25 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
-// Ensure database is created
+app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Ensure database is fresh with latest schema
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureDeleted();
     db.Database.EnsureCreated();
+
+    db.Usuarios.Add(new Usuario
+    {
+        Nombre = "Admin",
+        Email = "admin@loginet.com",
+        ContrasenaHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
+        Rol = Rol.Admin
+    });
+    await db.SaveChangesAsync();
 }
 
 app.MapGet("/", () => "LogiNet Backend is running");
@@ -92,20 +114,35 @@ app.MapPost("/auth/login", async (UserLoginDto dto, AppDbContext db, TokenServic
     return Results.Ok(new { token });
 }).AllowAnonymous();
 
-// Repartidores endpoint (Admin)
-app.MapGet("/repartidores", async (AppDbContext db) =>
+// Repartidores endpoint (any authenticated user)
+app.MapGet("/repartidores", async (AppDbContext db, HttpContext http) =>
 {
     var repartidores = await db.Usuarios
         .Where(u => u.Rol == Rol.Repartidor)
-        .Select(u => new { u.Id, u.Nombre, u.Email })
+        .Select(u => new RepartidorDto(u.Id, u.Nombre, u.Email))
         .ToListAsync();
     return Results.Ok(repartidores);
-}).RequireAuthorization("Admin");
+}).RequireAuthorization();
 
 // Orders endpoints (Admin)
 app.MapGet("/ordenes", async (AppDbContext db) =>
-    await db.Ordenes.Include(o => o.Repartidor).ToListAsync())
-    .RequireAuthorization("Admin");
+{
+    var ordenes = await db.Ordenes
+        .Include(o => o.Repartidor)
+        .OrderByDescending(o => o.FechaCreacion)
+        .ToListAsync();
+
+    var result = ordenes.Select(o => new OrderListDto(
+        o.Id,
+        o.Cliente,
+        o.Direccion,
+        o.Estado,
+        o.FechaCreacion,
+        o.RepartidorId,
+        o.Repartidor != null ? new RepartidorDto(o.Repartidor.Id, o.Repartidor.Nombre, o.Repartidor.Email) : null
+    ));
+    return Results.Ok(result);
+}).RequireAuthorization("Admin");
 
 app.MapPost("/ordenes", async (OrderCreateDto dto, AppDbContext db) =>
 {
@@ -114,6 +151,7 @@ app.MapPost("/ordenes", async (OrderCreateDto dto, AppDbContext db) =>
         Cliente = dto.Cliente,
         Direccion = dto.Direccion,
         Estado = "Pendiente",
+        FechaCreacion = DateTime.UtcNow,
         RepartidorId = dto.RepartidorId
     };
     db.Ordenes.Add(order);
@@ -125,7 +163,10 @@ app.MapPost("/ordenes", async (OrderCreateDto dto, AppDbContext db) =>
 app.MapGet("/ordenes/mis-entregas", async (AppDbContext db, HttpContext http) =>
 {
     var userId = int.Parse(http.User.FindFirst("sub")?.Value ?? "0");
-    var orders = await db.Ordenes.Where(o => o.RepartidorId == userId).ToListAsync();
+    var orders = await db.Ordenes
+        .Where(o => o.RepartidorId == userId)
+        .OrderByDescending(o => o.FechaCreacion)
+        .ToListAsync();
     return Results.Ok(orders);
 }).RequireAuthorization("Repartidor");
 

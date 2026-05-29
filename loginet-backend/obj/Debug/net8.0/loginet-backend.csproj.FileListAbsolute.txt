@@ -129,3 +129,4 @@ C:\Users\Ceballos\Documents\GitHub\DevRoute\loginet-backend\obj\Debug\net8.0\ref
 C:\Users\Ceballos\Documents\GitHub\DevRoute\loginet-backend\obj\Debug\net8.0\loginet-backend.pdb
 C:\Users\Ceballos\Documents\GitHub\DevRoute\loginet-backend\obj\Debug\net8.0\loginet-backend.genruntimeconfig.cache
 C:\Users\Ceballos\Documents\GitHub\DevRoute\loginet-backend\obj\Debug\net8.0\ref\loginet-backend.dll
+C:\Users\Ceballos\Documents\GitHub\DevRoute\loginet-backend\obj\Debug\net8.0\loginet-backend.sourcelink.json

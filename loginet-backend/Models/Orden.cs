@@ -6,7 +6,8 @@ namespace loginet_backend.Models;
 public class Orden
 {
     [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public int Id { get; set; }
 
     [Required]
     public string Cliente { get; set; } = string.Empty;
@@ -15,7 +16,9 @@ public class Orden
     public string Direccion { get; set; } = string.Empty;
 
     [Required]
-    public string Estado { get; set; } = "Pendiente"; // Pendiente, EnCamino, Entregado
+    public string Estado { get; set; } = "Pendiente";
+
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
     public int? RepartidorId { get; set; }
 
